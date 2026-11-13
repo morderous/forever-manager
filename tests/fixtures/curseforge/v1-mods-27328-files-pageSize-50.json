@@ -1,0 +1,200 @@
+{
+ "data": [
+  {
+   "id": 7000005,
+   "gameId": 1,
+   "modId": 27328,
+   "isAvailable": true,
+   "displayName": "QuestCompletist 3.9 beta",
+   "fileName": "QuestCompletist-3.9-beta.zip",
+   "releaseType": 2,
+   "fileStatus": 4,
+   "hashes": [
+    {
+     "value": "00000000000000000000000000000000006acfc5",
+     "algo": 1
+    },
+    {
+     "value": "000000000000000000000000006acfc5",
+     "algo": 2
+    }
+   ],
+   "fileDate": "2026-11-01T10:00:00.000Z",
+   "fileLength": 150005,
+   "downloadCount": 10,
+   "downloadUrl": "https://edge.forgecdn.net/files/7000/005/QuestCompletist-3.9-beta.zip",
+   "gameVersions": [
+    "1.60.1"
+   ]
+  },
+  {
+   "id": 7000004,
+   "gameId": 1,
+   "modId": 27328,
+   "isAvailable": true,
+   "displayName": "QuestCompletist 3.8",
+   "fileName": "QuestCompletist-3.8.zip",
+   "releaseType": 1,
+   "fileStatus": 4,
+   "hashes": [
+    {
+     "value": "00000000000000000000000000000000006acfc4",
+     "algo": 1
+    },
+    {
+     "value": "000000000000000000000000006acfc4",
+     "algo": 2
+    }
+   ],
+   "fileDate": "2026-10-20T10:00:00.000Z",
+   "fileLength": 150004,
+   "downloadCount": 10,
+   "downloadUrl": "https://edge.forgecdn.net/files/7000/004/QuestCompletist-3.8.zip",
+   "gameVersions": [
+    "1.60.1",
+    "1.15.7"
+   ]
+  },
+  {
+   "id": 7000006,
+   "gameId": 1,
+   "modId": 27328,
+   "isAvailable": true,
+   "displayName": "QuestCompletist 4.0",
+   "fileName": "QuestCompletist-4.0.zip",
+   "releaseType": 1,
+   "fileStatus": 4,
+   "hashes": [
+    {
+     "value": "00000000000000000000000000000000006acfc6",
+     "algo": 1
+    },
+    {
+     "value": "000000000000000000000000006acfc6",
+     "algo": 2
+    }
+   ],
+   "fileDate": "2026-11-03T10:00:00.000Z",
+   "fileLength": 150006,
+   "downloadCount": 10,
+   "downloadUrl": "https://edge.forgecdn.net/files/7000/006/QuestCompletist-4.0.zip",
+   "gameVersions": [
+    "11.2.5"
+   ]
+  },
+  {
+   "id": 7000003,
+   "gameId": 1,
+   "modId": 27328,
+   "isAvailable": true,
+   "displayName": "QuestCompletist 3.7",
+   "fileName": "QuestCompletist-3.7.zip",
+   "releaseType": 1,
+   "fileStatus": 4,
+   "hashes": [
+    {
+     "value": "00000000000000000000000000000000006acfc3",
+     "algo": 1
+    },
+    {
+     "value": "000000000000000000000000006acfc3",
+     "algo": 2
+    }
+   ],
+   "fileDate": "2026-09-01T10:00:00.000Z",
+   "fileLength": 150003,
+   "downloadCount": 10,
+   "downloadUrl": "https://edge.forgecdn.net/files/7000/003/QuestCompletist-3.7.zip",
+   "gameVersions": [
+    "1.60.1"
+   ]
+  },
+  {
+   "id": 7000007,
+   "gameId": 1,
+   "modId": 27328,
+   "isAvailable": true,
+   "displayName": "QuestCompletist 3.10 alpha",
+   "fileName": "QuestCompletist-3.10-alpha.zip",
+   "releaseType": 3,
+   "fileStatus": 4,
+   "hashes": [
+    {
+     "value": "00000000000000000000000000000000006acfc7",
+     "algo": 1
+    },
+    {
+     "value": "000000000000000000000000006acfc7",
+     "algo": 2
+    }
+   ],
+   "fileDate": "2026-11-04T10:00:00.000Z",
+   "fileLength": 150007,
+   "downloadCount": 10,
+   "downloadUrl": "https://edge.forgecdn.net/files/7000/007/QuestCompletist-3.10-alpha.zip",
+   "gameVersions": [
+    "1.60.0"
+   ]
+  },
+  {
+   "id": 7000002,
+   "gameId": 1,
+   "modId": 27328,
+   "isAvailable": true,
+   "displayName": "QuestCompletist 3.6 beta",
+   "fileName": "QuestCompletist-3.6-beta.zip",
+   "releaseType": 2,
+   "fileStatus": 4,
+   "hashes": [
+    {
+     "value": "00000000000000000000000000000000006acfc2",
+     "algo": 1
+    },
+    {
+     "value": "000000000000000000000000006acfc2",
+     "algo": 2
+    }
+   ],
+   "fileDate": "2026-08-01T10:00:00.000Z",
+   "fileLength": 150002,
+   "downloadCount": 10,
+   "downloadUrl": "https://edge.forgecdn.net/files/7000/002/QuestCompletist-3.6-beta.zip",
+   "gameVersions": [
+    "1.60.0"
+   ]
+  },
+  {
+   "id": 7000008,
+   "gameId": 1,
+   "modId": 27328,
+   "isAvailable": false,
+   "displayName": "QuestCompletist 3.9.1",
+   "fileName": "QuestCompletist-3.9.1.zip",
+   "releaseType": 1,
+   "fileStatus": 4,
+   "hashes": [
+    {
+     "value": "00000000000000000000000000000000006acfc8",
+     "algo": 1
+    },
+    {
+     "value": "000000000000000000000000006acfc8",
+     "algo": 2
+    }
+   ],
+   "fileDate": "2026-11-05T10:00:00.000Z",
+   "fileLength": 150008,
+   "downloadCount": 10,
+   "downloadUrl": "https://edge.forgecdn.net/files/7000/008/QuestCompletist-3.9.1.zip",
+   "gameVersions": [
+    "1.60.1"
+   ]
+  }
+ ],
+ "pagination": {
+  "index": 0,
+  "pageSize": 50,
+  "resultCount": 7,
+  "totalCount": 7
+ }
+}

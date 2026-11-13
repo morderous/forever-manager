@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "name": "Forever pack",
+  "addons": [
+    {"title": "ForeverUI", "required": true, "series": "^foreverui/v\\d", "zip": "ForeverUI-*.zip"},
+    {"title": "ForeverGuides", "required": true, "series": "^foreverguides/v\\d", "zip": "ForeverGuides-*.zip"},
+    {"title": "ForeverMap", "required": true, "series": "^forevermap/v\\d", "zip": "ForeverMap-*.zip"},
+    {"title": "ForeverGuides Packs", "required": true, "series": "^packs/v\\d", "zip": "ForeverGuidesPacks-*.zip", "guidesOnly": true},
+    {"repo": "EllesmereGaming/EllesmereUI", "title": "EllesmereUI", "ticked": false},
+    {"curseforge": 27328, "title": "Quest Completist", "ticked": false, "recommended": true},
+    {"repo": "alexdia25/forever-quest-tint", "title": "Forever Quest Tint", "ticked": false, "recommended": true},
+    {"repo": "Peterodox/YUI-Dialogue", "title": "Dialogue UI", "ticked": false},
+    {"repo": "rusty-key/spoken-wow", "title": "Spoken", "series": "^spoken/v\\d", "zip": "Spoken-*.zip", "ticked": false},
+    {"repo": "rusty-key/spoken-wow", "title": "Spoken Quests Audio", "ticked": false, "series": "^quests-audio/v\\d", "zip": "SpokenQuestsAudioAll-*.zip"},
+    {"repo": "rusty-key/spoken-wow", "title": "Spoken Readables Audio", "ticked": false, "series": "^readables-audio/v\\d", "zip": "SpokenReadablesAudio-*.zip"},
+    {"repo": "rusty-key/spoken-wow", "title": "Spoken Places Audio", "ticked": false, "series": "^places-audio/v\\d", "zip": "SpokenPlacesAudio-*.zip"},
+    {"repo": "rusty-key/spoken-wow", "title": "Spoken Bosses Audio", "ticked": false, "series": "^bosses-audio/v\\d", "zip": "SpokenBossesAudio-*.zip"}
+  ]
+}

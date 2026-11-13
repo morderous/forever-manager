@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "name": "Private pack",
+  "addons": [
+    { "title": "ForeverGuides", "series": "^foreverguides/v\\d", "zip": "ForeverGuides-*.zip", "replaces": ["fitzforge/polestar"] },
+    { "title": "ForeverMap", "series": "^forevermap/v\\d", "zip": "ForeverMap-*.zip", "replaces": ["openmap-world/openmap"] },
+    { "title": "ForeverGuides Packs", "series": "^packs/v\\d", "zip": "ForeverGuidesPacks-*.zip", "guidesOnly": true }
+  ]
+}

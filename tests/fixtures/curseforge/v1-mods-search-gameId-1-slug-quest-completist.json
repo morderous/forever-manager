@@ -1,0 +1,42 @@
+{
+ "data": [
+  {
+   "id": 27329,
+   "gameId": 1,
+   "name": "Quest Completist",
+   "slug": "quest-completist-classic",
+   "links": {
+    "websiteUrl": "https://www.curseforge.com/wow/addons/quest-completist"
+   },
+   "authors": [
+    {
+     "id": 1,
+     "name": "test-author"
+    }
+   ],
+   "allowModDistribution": true
+  },
+  {
+   "id": 27328,
+   "gameId": 1,
+   "name": "Quest Completist",
+   "slug": "quest-completist",
+   "links": {
+    "websiteUrl": "https://www.curseforge.com/wow/addons/quest-completist"
+   },
+   "authors": [
+    {
+     "id": 1,
+     "name": "test-author"
+    }
+   ],
+   "allowModDistribution": true
+  }
+ ],
+ "pagination": {
+  "index": 0,
+  "pageSize": 50,
+  "resultCount": 2,
+  "totalCount": 2
+ }
+}

@@ -1,0 +1,12 @@
+[
+  { "tag_name": "manager/v1.0.0", "draft": false, "prerelease": false, "published_at": "2026-11-07T12:00:00Z", "html_url": "https://github.com/morderous/forever-addons/releases/tag/manager/v1.0.0",
+    "assets": [ { "name": "ForeverManager-1.0.0.exe", "url": "https://api.github.com/repos/morderous/forever-addons/releases/assets/9005", "size": 150000, "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555" } ] },
+  { "tag_name": "packs/v1", "draft": false, "prerelease": false, "published_at": "2026-11-06T12:00:00Z", "html_url": "https://github.com/morderous/forever-addons/releases/tag/packs/v1",
+    "assets": [ { "name": "ForeverGuidesPacks-1.zip", "url": "https://api.github.com/repos/morderous/forever-addons/releases/assets/9004", "size": 3200000, "digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444" } ] },
+  { "tag_name": "forevermap/v0.7.5-fm.1", "draft": false, "prerelease": false, "published_at": "2026-11-06T11:00:00Z", "html_url": "https://github.com/morderous/forever-addons/releases/tag/forevermap/v0.7.5-fm.1",
+    "assets": [ { "name": "ForeverMap-0.7.5-fm.1.zip", "url": "https://api.github.com/repos/morderous/forever-addons/releases/assets/9003", "size": 289000000, "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333" } ] },
+  { "tag_name": "foreverguides/v0.1.0", "draft": false, "prerelease": false, "published_at": "2026-11-06T10:00:00Z", "html_url": "https://github.com/morderous/forever-addons/releases/tag/foreverguides/v0.1.0",
+    "assets": [ { "name": "ForeverGuides-0.1.0.zip", "url": "https://api.github.com/repos/morderous/forever-addons/releases/assets/9002", "size": 2100000, "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222" } ] },
+  { "tag_name": "foreverui/v0.1.0", "draft": false, "prerelease": false, "published_at": "2026-11-06T09:00:00Z", "html_url": "https://github.com/morderous/forever-addons/releases/tag/foreverui/v0.1.0",
+    "assets": [ { "name": "ForeverUI-0.1.0.zip", "url": "https://api.github.com/repos/morderous/forever-addons/releases/assets/9001", "size": 480000, "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111" } ] }
+]

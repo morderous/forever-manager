@@ -1,0 +1,6 @@
+*.exe
+tests/*.exe
+tests/out/
+*.g.cs
+# Needs the private release scripts and zips: kept on the build computer only.
+tests/friends_test.py

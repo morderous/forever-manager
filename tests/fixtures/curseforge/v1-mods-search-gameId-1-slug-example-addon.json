@@ -1,0 +1,26 @@
+{
+ "data": [
+  {
+   "id": 900001,
+   "gameId": 1,
+   "name": "Example Addon",
+   "slug": "example-addon",
+   "links": {
+    "websiteUrl": "https://www.curseforge.com/wow/addons/example-addon"
+   },
+   "authors": [
+    {
+     "id": 2,
+     "name": "test-author"
+    }
+   ],
+   "allowModDistribution": true
+  }
+ ],
+ "pagination": {
+  "index": 0,
+  "pageSize": 50,
+  "resultCount": 1,
+  "totalCount": 1
+ }
+}

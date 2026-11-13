@@ -1,0 +1,37 @@
+{
+ "data": [
+  {
+   "id": 7100001,
+   "gameId": 1,
+   "modId": 900001,
+   "isAvailable": true,
+   "displayName": "Example Addon 1.2",
+   "fileName": "ExampleAddon-1.2.zip",
+   "releaseType": 1,
+   "fileStatus": 4,
+   "hashes": [
+    {
+     "value": "00000000000000000000000000000000006c5661",
+     "algo": 1
+    },
+    {
+     "value": "000000000000000000000000006c5661",
+     "algo": 2
+    }
+   ],
+   "fileDate": "2026-10-01T10:00:00.000Z",
+   "fileLength": 150001,
+   "downloadCount": 10,
+   "downloadUrl": "https://edge.forgecdn.net/files/7100/001/ExampleAddon-1.2.zip",
+   "gameVersions": [
+    "1.60.1"
+   ]
+  }
+ ],
+ "pagination": {
+  "index": 0,
+  "pageSize": 50,
+  "resultCount": 1,
+  "totalCount": 1
+ }
+}
