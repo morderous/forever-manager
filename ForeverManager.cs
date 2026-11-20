@@ -35,8 +35,8 @@ using Microsoft.Win32;
 [assembly: AssemblyProduct("Forever Manager")]
 [assembly: AssemblyDescription("Keeps WoW Forever addons up to date from the Forever pack")]
 [assembly: AssemblyCompany("morderous")]
-[assembly: AssemblyVersion("1.0.8.0")]
-[assembly: AssemblyFileVersion("1.0.8.0")]
+[assembly: AssemblyVersion("1.0.9.0")]
+[assembly: AssemblyFileVersion("1.0.9.0")]
 
 namespace ForeverManager
 {
@@ -141,7 +141,7 @@ namespace ForeverManager
     // folder elsewhere and keeps the app off the Windows Run key.
     static class Core
     {
-        public const string Version = "1.0.8";
+        public const string Version = "1.0.9";
         public const string Author = "morderous";
         public const string AuthorUrl = "https://github.com/morderous";
         public const string KofiUrl = "https://ko-fi.com/morderous";
@@ -230,21 +230,41 @@ namespace ForeverManager
         }
 
         // Start with Windows: our own value in the user's Run key, pointing at
-        // this exe wherever it is now. Never in a test.
+        // this exe wherever it is now. Never in a test. Off unless the user
+        // ticks the box: the key is only read until there is a change to make.
+        const string RunPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+
+        // What the Run key holds for us now; null when nothing (or in a test).
+        static string RunKeyValue()
+        {
+            if (TestMode) return null;
+            try
+            {
+                using (RegistryKey run = Registry.CurrentUser.OpenSubKey(RunPath)) return run == null ? null : run.GetValue(RunName) as string;
+            }
+            catch { return null; }
+        }
+
+        // Start with Windows when nothing was ever chosen: off, unless an
+        // earlier version (on by default until 1.0.8) left its value there.
+        public static bool StartWithWindows()
+        {
+            return Setting("startWithWindows", RunKeyValue() != null ? "1" : "0") == "1";
+        }
+
         public static void SetRunKey(bool on)
         {
             if (TestMode) return;
             try
             {
-                using (RegistryKey run = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
+                string have = RunKeyValue();
+                string want = "\"" + Application.ExecutablePath + "\" --tray";
+                if (on ? string.Equals(have, want, StringComparison.OrdinalIgnoreCase) : have == null) return;
+                using (RegistryKey run = Registry.CurrentUser.OpenSubKey(RunPath, true))
                 {
                     if (run == null) return;
-                    string want = "\"" + Application.ExecutablePath + "\" --tray";
-                    if (on)
-                    {
-                        if (!string.Equals(run.GetValue(RunName) as string, want, StringComparison.OrdinalIgnoreCase)) run.SetValue(RunName, want);
-                    }
-                    else if (run.GetValue(RunName) != null) run.DeleteValue(RunName, false);
+                    if (on) run.SetValue(RunName, want);
+                    else run.DeleteValue(RunName, false);
                 }
             }
             catch (Exception why) { Log("Run key: " + why.Message); }
@@ -3692,7 +3712,7 @@ namespace ForeverManager
             SetUpTray();
             selfReady = SelfUpdate.Ready(SelfUpdate.ExePath());
             ShowSelf();
-            startBox.Checked = Core.Setting("startWithWindows", "1") == "1";
+            startBox.Checked = Core.StartWithWindows();
             trayBox.Checked = Core.Setting("closeToTray", "1") == "1";
             Core.SetRunKey(startBox.Checked);
             startBox.CheckedChanged += delegate { Core.SetSetting("startWithWindows", startBox.Checked ? "1" : "0"); Core.SetRunKey(startBox.Checked); };
