@@ -35,8 +35,8 @@ using Microsoft.Win32;
 [assembly: AssemblyProduct("Forever Manager")]
 [assembly: AssemblyDescription("Keeps WoW Forever addons up to date from the Forever pack")]
 [assembly: AssemblyCompany("morderous")]
-[assembly: AssemblyVersion("1.0.9.0")]
-[assembly: AssemblyFileVersion("1.0.9.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace ForeverManager
 {
@@ -141,7 +141,7 @@ namespace ForeverManager
     // folder elsewhere and keeps the app off the Windows Run key.
     static class Core
     {
-        public const string Version = "1.0.9";
+        public const string Version = "1.1.0";
         public const string Author = "morderous";
         public const string AuthorUrl = "https://github.com/morderous";
         public const string KofiUrl = "https://ko-fi.com/morderous";
@@ -3610,8 +3610,84 @@ namespace ForeverManager
         static readonly Color CGreen = Color.FromArgb(100, 212, 124);
         static readonly Color CDev = Color.FromArgb(178, 144, 255);
 
-        static readonly int[] Widths = { 270, 104, 104, 160, 90, 34 };
-        static readonly string[] Titles = { "Addon", "Installed", "Latest", "State", "Auto update", "" };
+        static readonly int[] Widths = { 270, 92, 96, 96, 152, 84, 90, 34 };
+        static readonly string[] Titles = { "Addon", "Source", "Installed", "Latest", "State", "Updated", "Auto update", "" };
+        const int ColSource = 1, ColInstalled = 2, ColLatest = 3, ColState = 4, ColUpdated = 5, ColAuto = 6, ColCross = 7;
+        // The columns whose title sorts the list when clicked, and the name each goes by in settings.ini ("sort").
+        static readonly string[] SortKeys = { "name", "source", null, null, "state", "updated", "auto", null };
+        static readonly Color CGitHub = Color.FromArgb(200, 204, 212), CCurse = Color.FromArgb(240, 140, 70);
+
+        // Where an addon comes from, as its Source column says it and in that column's order:
+        // the Forever pack's own server, GitHub, CurseForge.
+        public static int SourceRank(TrackedAddon a)
+        {
+            return a.IsCurse ? 2 : a.Private ? 0 : 1;
+        }
+
+        public static string SourceWord(TrackedAddon a)
+        {
+            return a.IsCurse ? "CurseForge" : a.Private ? "Forever" : "GitHub";
+        }
+
+        // Under the line at the end of the list, whatever its order: not
+        // installed by the Manager, no dev copy and no copy put in AddOns by hand.
+        public static bool Below(TrackedAddon a)
+        {
+            return a.Tag == null && !a.Dev && a.Found == null;
+        }
+
+        // The State column's order: what asks for something first, what is fine after.
+        public static int StateRank(TrackedAddon a)
+        {
+            if (Blocked(a) != null) return 7;
+            if (a.Problem != null) return 0;
+            if (a.Tag != null && a.Missing) return 1;
+            if (a.Tag != null && a.UpdateWaits) return 2;
+            if (a.Tag != null && a.Latest != null && a.Latest.Skipped != null) return 3;
+            if (a.Tag == null && a.Dev) return 4;
+            if (a.Tag == null && a.Found != null) return 5;
+            return 6;
+        }
+
+        // The list in the order of a column ("name", "source", "state", "updated", "auto";
+        // anything else: as kept), then the ones Below after all the others.
+        // As first clicked: names A to Z, what asks for something first, the
+        // last updated first, Auto update on first; flip turns it round. The
+        // ones with no date stay last either way; equals go by name.
+        public static List<TrackedAddon> Order(List<TrackedAddon> all, string by, bool flip)
+        {
+            Func<TrackedAddon, string> name = a => a.Name ?? "";
+            StringComparer plain = StringComparer.OrdinalIgnoreCase;
+            IEnumerable<TrackedAddon> sorted = all;
+            if (by == "source") sorted = (flip ? all.OrderByDescending(a => SourceRank(a)) : all.OrderBy(a => SourceRank(a))).ThenBy(name, plain);
+            else if (by == "name") sorted = flip ? all.OrderByDescending(name, plain) : all.OrderBy(name, plain);
+            else if (by == "state") sorted = (flip ? all.OrderByDescending(a => StateRank(a)) : all.OrderBy(a => StateRank(a))).ThenBy(name, plain);
+            else if (by == "auto") sorted = (flip ? all.OrderBy(a => a.Auto ? 1 : 0) : all.OrderBy(a => a.Auto ? 0 : 1)).ThenBy(name, plain);
+            else if (by == "updated")
+            {
+                Func<TrackedAddon, string> when = a => a.Tag != null ? a.InstalledAt ?? "" : "";
+                IOrderedEnumerable<TrackedAddon> dated = all.OrderBy(a => when(a) == "" ? 1 : 0);
+                sorted = (flip ? dated.ThenBy(when, StringComparer.Ordinal) : dated.ThenByDescending(when, StringComparer.Ordinal)).ThenBy(name, plain);
+            }
+            List<TrackedAddon> kept = sorted.ToList();
+            List<TrackedAddon> ordered = kept.FindAll(a => !Below(a));
+            ordered.AddRange(kept.FindAll(a => Below(a)));
+            return ordered;
+        }
+
+        // The Updated column: how long ago it was installed or updated, from
+        // InstalledAt ("yyyy-MM-dd HH:mm"), by the days of the calendar.
+        public static string Ago(string at, DateTime now)
+        {
+            DateTime when;
+            if (at == null || !DateTime.TryParseExact(at, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out when)) return "-";
+            int days = (int)(now.Date - when.Date).TotalDays;
+            if (days <= 0) return "today";
+            if (days == 1) return "yesterday";
+            if (days < 60) return days + " d ago";
+            if (days < 730) return days / 30 + " mo ago";
+            return days / 365 + " y ago";
+        }
         // How often it checks by itself: the addons' new versions, the pack's
         // list and the Manager's own new version, all in one round. Check for updates
         // and the tray's Check for updates go at once.
@@ -3624,7 +3700,7 @@ namespace ForeverManager
         }
 
         // The smallest inside of the window (at 96 dpi): the row of buttons whole, a few rows of the list.
-        const int MinWidth = 780, MinHeight = 450;
+        const int MinWidth = 900, MinHeight = 450;
 
         readonly bool startHidden, shotMode;
         bool placed;                        // put where settings.ini said: from now on its moves are kept
@@ -3644,6 +3720,12 @@ namespace ForeverManager
         // the ones under the mouse, drawn lit.
         TrackedAddon armed, hoverCross, hoverUpdate;
         string armedSaid;
+        string sortBy;                      // "name", "state", "updated", "auto"; "": the order kept in addons.json
+        bool sortFlip;
+        bool hideBelow, hoverLine;          // the not installed folded away under their line; the mouse on that line
+        int belowCount;
+        string tipSaid;
+        readonly ToolTip tips = new ToolTip();
         readonly System.Windows.Forms.Timer disarm = new System.Windows.Forms.Timer { Interval = 4000 };
 
         readonly ListView list = new DarkList();
@@ -3688,6 +3770,8 @@ namespace ForeverManager
             Controls.Clear();
             body.Controls.AddRange(all);
             Controls.Add(body);
+            // Laid out at 780 wide (Build's own numbers), then given the room of the Source and Updated columns: the anchors take it.
+            ClientSize = new Size(S(MinWidth), ClientSize.Height);
             MinimumSize = SizeFromClientSize(new Size(S(MinWidth), S(MinHeight)));
             if (shotMode)
             {
@@ -3708,6 +3792,10 @@ namespace ForeverManager
             addons = Store.Load();
             game = Game.Folder();
             ShowGame();
+            sortBy = Core.Setting("sort", "");
+            if (sortBy == "" || Array.IndexOf(SortKeys, sortBy) < 0) sortBy = "";
+            sortFlip = Core.Setting("sortFlip", "0") == "1";
+            hideBelow = Core.Setting("hideBelow", "0") == "1";
             Fill();
             SetUpTray();
             selfReady = SelfUpdate.Ready(SelfUpdate.ExePath());
@@ -3995,6 +4083,8 @@ namespace ForeverManager
             heads.Paint += PaintHeads;
             heads.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             heads.Resize += delegate { heads.Invalidate(); };
+            heads.MouseClick += delegate(object sender, MouseEventArgs e) { if (e.Button == MouseButtons.Left) SortBy(HeadAt(e.X)); };
+            heads.MouseMove += delegate(object sender, MouseEventArgs e) { int at = HeadAt(e.X); heads.Cursor = at >= 0 && SortKeys[at] != null ? Cursors.Hand : Cursors.Default; };
             Controls.Add(heads);
 
             list.Location = new Point(S(20), S(156));
@@ -4017,7 +4107,13 @@ namespace ForeverManager
             list.DrawColumnHeader += delegate(object sender, DrawListViewColumnHeaderEventArgs e) { e.DrawDefault = false; };
             list.DrawItem += delegate(object sender, DrawListViewItemEventArgs e) { e.DrawDefault = false; };
             list.DrawSubItem += DrawCell;
-            list.SelectedIndexChanged += delegate { ShowPicked(); Buttons(); };
+            // The line between the two groups is a row of its own (no addon): never picked.
+            list.SelectedIndexChanged += delegate
+            {
+                foreach (ListViewItem item in list.SelectedItems.Cast<ListViewItem>().ToList()) if (item.Tag == null) item.Selected = false;
+                ShowPicked();
+                Buttons();
+            };
             list.MouseClick += ClickList;
             list.MouseMove += delegate(object sender, MouseEventArgs e) { Hover(e.Location); };
             list.MouseLeave += delegate { Hover(new Point(-1, -1)); };
@@ -4157,11 +4253,69 @@ namespace ForeverManager
             int x = 0;
             for (int i = 0; i < list.Columns.Count; i++)
             {
-                TextRenderer.DrawText(e.Graphics, Titles[i], small, new Rectangle(x + S(10), 0, list.Columns[i].Width - S(12), heads.Height), CDim,
+                bool sorted = sortBy != "" && SortKeys[i] == sortBy;
+                TextRenderer.DrawText(e.Graphics, Titles[i], small, new Rectangle(x + S(10), 0, list.Columns[i].Width - S(12), heads.Height), sorted ? CAccent : CDim,
                     TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+                if (sorted)
+                {
+                    // An arrow after the title: up for A to Z and the like, down for the newest first and the orders turned round.
+                    bool down = sortFlip != (sortBy == "updated");
+                    float left = x + S(10) + TextRenderer.MeasureText(e.Graphics, Titles[i], small).Width + S(1), w = S(7), h = S(4), top = (heads.Height - h) / 2f;
+                    PointF[] arrow = down ? new[] { new PointF(left, top), new PointF(left + w, top), new PointF(left + w / 2, top + h) }
+                        : new[] { new PointF(left, top + h), new PointF(left + w, top + h), new PointF(left + w / 2, top) };
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    using (SolidBrush fill = new SolidBrush(CAccent)) e.Graphics.FillPolygon(fill, arrow);
+                    e.Graphics.SmoothingMode = SmoothingMode.None;
+                }
                 x += list.Columns[i].Width;
             }
             using (Pen line = new Pen(CLine)) e.Graphics.DrawLine(line, 0, heads.Height - 1, heads.Width, heads.Height - 1);
+        }
+
+        // The column whose title is at x on the header; -1 past the last.
+        int HeadAt(int x)
+        {
+            int left = 0;
+            for (int i = 0; i < list.Columns.Count; i++)
+            {
+                left += list.Columns[i].Width;
+                if (x < left) return i;
+            }
+            return -1;
+        }
+
+        // A click on a column's title: the list in its order; again, turned
+        // round; a third time, back to the order kept (the pack's). Kept in settings.ini.
+        void SortBy(int column)
+        {
+            if (column < 0 || SortKeys[column] == null) return;
+            if (sortBy != SortKeys[column]) { sortBy = SortKeys[column]; sortFlip = false; }
+            else if (!sortFlip) sortFlip = true;
+            else { sortBy = ""; sortFlip = false; }
+            try
+            {
+                Core.SetSetting("sort", sortBy);
+                Core.SetSetting("sortFlip", sortFlip ? "1" : "0");
+            }
+            catch { }
+            Disarm();
+            Fill();
+            heads.Invalidate();
+        }
+
+        // The line's own button: the not installed folded away, or shown again. Kept in settings.ini.
+        void FoldBelow()
+        {
+            hideBelow = !hideBelow;
+            try { Core.SetSetting("hideBelow", hideBelow ? "1" : "0"); } catch { }
+            Disarm();
+            Fill();
+        }
+
+        // What the line's button says: "Hide", or how many it folds away.
+        string LineWords()
+        {
+            return hideBelow ? "Show " + belowCount + " not installed" : "Hide";
         }
 
         // What the Update all above the State column puts in: the updates that wait (none to install).
@@ -4178,7 +4332,7 @@ namespace ForeverManager
             if (list.Columns.Count < Widths.Length) return;
             int row = heads.Top - S(32), h = S(26);
             int state = heads.Left, end = heads.Left;
-            for (int i = 0; i < 3; i++) state += list.Columns[i].Width;
+            for (int i = 0; i < ColState; i++) state += list.Columns[i].Width;
             for (int i = 0; i < list.Columns.Count; i++) end += list.Columns[i].Width;
             installSel.SetBounds(heads.Left, row, Fit(installSel), h);
             topUpdate.SetBounds(state + S(4), row, Math.Max(S(112), Fit(topUpdate)), h);
@@ -4303,14 +4457,24 @@ namespace ForeverManager
         {
             ListViewItem item = p.X < 0 ? null : list.GetItemAt(p.X, p.Y);
             TrackedAddon a = item == null ? null : (TrackedAddon)item.Tag;
-            TrackedAddon cross = a != null && RowCrosses(a) && CrossBox(CellOf(item, 5)).Contains(p) ? a : null;
+            TrackedAddon cross = a != null && RowCrosses(a) && CrossBox(CellOf(item, ColCross)).Contains(p) ? a : null;
             string act = a == null ? null : RowAction(a);
-            TrackedAddon update = act != null && RowChip(CellOf(item, 3), act).Contains(p) ? a : null;
-            list.Cursor = (cross != null || update != null) && !busy ? Cursors.Hand : Cursors.Default;
-            if (cross != hoverCross || update != hoverUpdate)
+            TrackedAddon update = act != null && RowChip(CellOf(item, ColState), act).Contains(p) ? a : null;
+            bool line = item != null && a == null;
+            list.Cursor = ((cross != null || update != null) && !busy) || line ? Cursors.Hand : Cursors.Default;
+            // Said at the mouse: the day and hour behind "5 d ago"; what a click on the line does.
+            string tip = line ? (hideBelow ? "Click to show the addons that are not installed" : "Click to hide the addons that are not installed")
+                : a != null && a.Tag != null && a.InstalledAt != null && CellOf(item, ColUpdated).Contains(p) ? "Installed or updated on " + a.InstalledAt : null;
+            if (tip != tipSaid)
+            {
+                tipSaid = tip;
+                tips.SetToolTip(list, tip ?? "");
+            }
+            if (cross != hoverCross || update != hoverUpdate || line != hoverLine)
             {
                 hoverCross = cross;
                 hoverUpdate = update;
+                hoverLine = line;
                 list.Invalidate();
             }
         }
@@ -4335,12 +4499,6 @@ namespace ForeverManager
             list.Invalidate();
         }
 
-        // Where an addon comes from, said after its author.
-        static string From(TrackedAddon a)
-        {
-            return a.IsCurse ? "CurseForge" : a.Private ? "Forever pack" : "GitHub";
-        }
-
         void DrawCell(object sender, DrawListViewSubItemEventArgs e)
         {
             TrackedAddon a = (TrackedAddon)e.Item.Tag;
@@ -4348,6 +4506,22 @@ namespace ForeverManager
             for (int i = 0; i < e.ColumnIndex; i++) x += list.Columns[i].Width;
             // Column 0's bounds span the whole row: each cell from the columns' widths.
             Rectangle cell = new Rectangle(e.Item.Bounds.X + x, e.Bounds.Y, list.Columns[e.ColumnIndex].Width, e.Bounds.Height);
+            if (a == null)
+            {
+                // The line between the installed and the not installed, across the row.
+                using (SolidBrush back = new SolidBrush(CPanel)) e.Graphics.FillRectangle(back, cell);
+                int thick = Math.Max(2, S(2)), from = cell.X;
+                if (e.ColumnIndex == 0)
+                {
+                    // Its button at the start: "Hide", or "Show 7 not installed" once folded away.
+                    Rectangle chip = RowChip(cell, LineWords());
+                    DrawButton(e.Graphics, LineWords(), chip, hideBelow ? CText : CDim, true, hoverLine);
+                    from = chip.Right + S(8);
+                }
+                if (from < cell.Right)
+                    using (SolidBrush line = new SolidBrush(CLine)) e.Graphics.FillRectangle(line, from, cell.Y + (cell.Height - thick) / 2, cell.Right - from, thick);
+                return;
+            }
             using (SolidBrush back = new SolidBrush(e.Item.Selected ? CPick : (e.ItemIndex % 2 == 0 ? CPanel : CRow)))
                 e.Graphics.FillRectangle(back, cell);
             Rectangle text = new Rectangle(cell.X + S(10), cell.Y, cell.Width - S(14), cell.Height);
@@ -4389,17 +4563,24 @@ namespace ForeverManager
                             }
                         }
                         Rectangle by = new Rectangle(text.X + after, text.Y, Math.Max(0, text.Width - after), text.Height);
-                        string who = a.By != "" && !a.Private ? "by " + a.By + "  ·  " + From(a) : From(a);
-                        if (by.Width > S(30)) TextRenderer.DrawText(e.Graphics, who, small, by, CDim, flags);
+                        // Its author alone: where it comes from has a column of its own.
+                        string who = a.By != "" && !a.Private ? "by " + a.By : "";
+                        if (who != "" && by.Width > S(30)) TextRenderer.DrawText(e.Graphics, who, small, by, CDim, flags);
                         break;
                     }
-                case 1:
+                case ColSource:
+                    {
+                        string from = SourceWord(a);
+                        DrawTag(e.Graphics, from, TagBox(e.Graphics, from, text.X, cell), a.IsCurse ? CCurse : a.Private ? CGold : CGitHub);
+                        break;
+                    }
+                case ColInstalled:
                     TextRenderer.DrawText(e.Graphics, a.Tag != null ? VersionText(a, a.Tag) : a.Dev ? (a.Found != null && a.Found != "?" ? a.Found + " (dev)" : "dev copy") : (a.Found != null ? a.Found + " (by hand)" : "-"), Font, text, a.Tag != null ? CText : a.Dev ? CDev : CDim, flags);
                     break;
-                case 2:
+                case ColLatest:
                     TextRenderer.DrawText(e.Graphics, a.Known != null ? VersionText(a, a.Known) : "-", Font, text, CText, flags);
                     break;
-                case 3:
+                case ColState:
                     {
                         if (armed == a && a.Tag != null)
                         {
@@ -4417,7 +4598,14 @@ namespace ForeverManager
                         TextRenderer.DrawText(e.Graphics, said, Font, text, colour, flags);
                         break;
                     }
-                case 4:
+                case ColUpdated:
+                    {
+                        // Just changed (today, yesterday): bright; the rest dim.
+                        string ago = a.Tag != null ? Ago(a.InstalledAt, DateTime.Now) : "-";
+                        TextRenderer.DrawText(e.Graphics, ago, Font, text, ago == "today" ? CAccent : ago == "yesterday" ? CText : CDim, flags);
+                        break;
+                    }
+                case ColAuto:
                     {
                         int size = S(14);
                         Rectangle box = new Rectangle(text.X, cell.Y + (cell.Height - size) / 2, size, size);
@@ -4427,7 +4615,7 @@ namespace ForeverManager
                         TextRenderer.DrawText(e.Graphics, a.Auto ? "On" : "Off", small, new Rectangle(box.Right + S(6), cell.Y, cell.Width, cell.Height), a.Auto ? CText : CDim, flags);
                         break;
                     }
-                case 5:
+                case ColCross:
                     if (RowCrosses(a)) DrawCross(e.Graphics, CrossBox(cell), hoverCross == a && !busy, armed == a);
                     break;
             }
@@ -4522,7 +4710,7 @@ namespace ForeverManager
         {
             ListViewHitTestInfo hit = list.HitTest(e.Location);
             TrackedAddon row = hit.Item == null ? null : (TrackedAddon)hit.Item.Tag;
-            bool cross = row != null && e.Button == MouseButtons.Left && RowCrosses(row) && CrossBox(CellOf(hit.Item, 5)).Contains(e.Location);
+            bool cross = row != null && e.Button == MouseButtons.Left && RowCrosses(row) && CrossBox(CellOf(hit.Item, ColCross)).Contains(e.Location);
             // Any other click lets go of a waiting ×.
             if (!(cross && armed == row)) Disarm();
             if (cross)
@@ -4533,10 +4721,15 @@ namespace ForeverManager
                 return;
             }
             string act = row == null ? null : RowAction(row);
-            if (act != null && e.Button == MouseButtons.Left && RowChip(CellOf(hit.Item, 3), act).Contains(e.Location))
+            if (act != null && e.Button == MouseButtons.Left && RowChip(CellOf(hit.Item, ColState), act).Contains(e.Location))
             {
                 if (busy || game == null) return;
                 if (Trust(row) && GameOpenOk(act)) Install(row, false, null);
+                return;
+            }
+            if (hit.Item != null && row == null)
+            {
+                if (e.Button == MouseButtons.Left) FoldBelow();
                 return;
             }
             if (hit.Item == null || hit.SubItem == null) return;
@@ -4546,7 +4739,7 @@ namespace ForeverManager
                 Toggle((TrackedAddon)hit.Item.Tag);
                 return;
             }
-            if (column != 4) return;
+            if (column != ColAuto) return;
             TrackedAddon a = (TrackedAddon)hit.Item.Tag;
             a.Auto = !a.Auto;
             if (addons.Contains(a)) Store.Save(addons);
@@ -4585,8 +4778,8 @@ namespace ForeverManager
 
         void Pick(TrackedAddon a)
         {
-            foreach (ListViewItem item in list.Items) item.Selected = item.Tag == a;
-            ListViewItem picked = list.Items.Cast<ListViewItem>().FirstOrDefault(i => i.Tag == a);
+            foreach (ListViewItem item in list.Items) item.Selected = a != null && item.Tag == a;
+            ListViewItem picked = a == null ? null : list.Items.Cast<ListViewItem>().FirstOrDefault(i => i.Tag == a);
             if (picked != null) picked.EnsureVisible();
         }
 
@@ -4636,15 +4829,25 @@ namespace ForeverManager
             TrackedAddon keep = Picked();
             list.BeginUpdate();
             list.Items.Clear();
-            foreach (TrackedAddon a in addons)
+            foreach (TrackedAddon a in addons) Probe(a);
+            // In the order of the column picked; the not installed after a line of their own.
+            bool lined = false;
+            belowCount = addons.Count(a => Below(a));
+            foreach (TrackedAddon a in Order(addons, sortBy, sortFlip))
             {
-                Probe(a);
-                ListViewItem item = new ListViewItem(new[] { a.Repo, "", "", "", "", "" });
+                if (Below(a) && !lined && list.Items.Count > 0)
+                {
+                    list.Items.Add(new ListViewItem(new[] { "", "", "", "", "", "", "", "" }));
+                    lined = true;
+                }
+                // Folded away under their line (never when there is no line to bring them back).
+                if (Below(a) && lined && hideBelow) continue;
+                ListViewItem item = new ListViewItem(new[] { a.Repo, "", "", "", "", "", "", "" });
                 item.Tag = a;
                 list.Items.Add(item);
             }
             list.EndUpdate();
-            ListViewItem again = list.Items.Cast<ListViewItem>().FirstOrDefault(i => i.Tag == keep);
+            ListViewItem again = keep == null ? null : list.Items.Cast<ListViewItem>().FirstOrDefault(i => i.Tag == keep);
             if (again == null && list.Items.Count > 0) again = list.Items[0];
             if (again != null) again.Selected = true;
             ShowPicked();
@@ -5506,7 +5709,7 @@ namespace ForeverManager
             if (path == "" || shotTaken) return;
             shotTaken = true;
             // FUM_SHOT_PICK: the row of that name picked and in view.
-            ListViewItem pick = list.Items.Cast<ListViewItem>().FirstOrDefault(i => ((TrackedAddon)i.Tag).Name == Core.Env("FUM_SHOT_PICK"));
+            ListViewItem pick = list.Items.Cast<ListViewItem>().FirstOrDefault(i => i.Tag != null && ((TrackedAddon)i.Tag).Name == Core.Env("FUM_SHOT_PICK"));
             if (pick != null) { pick.Selected = true; pick.EnsureVisible(); }
             // FUM_SHOT_ARM: the row of that name with its × clicked once.
             TrackedAddon primed = addons.FirstOrDefault(a => a.Name == Core.Env("FUM_SHOT_ARM") && a.Tag != null);
@@ -5523,7 +5726,7 @@ namespace ForeverManager
                 if (marked != null) Toggle(marked);
             }
             string[] click = Core.Env("FUM_SHOT_CLICK").Split('|');
-            ListViewItem target = click.Length == 2 ? list.Items.Cast<ListViewItem>().FirstOrDefault(i => ((TrackedAddon)i.Tag).Name == click[0]) : null;
+            ListViewItem target = click.Length == 2 ? list.Items.Cast<ListViewItem>().FirstOrDefault(i => i.Tag != null && ((TrackedAddon)i.Tag).Name == click[0]) : null;
             if (click.Length == 2 && click[1] == "all") topUpdate.PerformClick();
             // Without their questions: what they put in and take out.
             if (click.Length == 2 && click[1] == "installsel") RunQueue(ToInstall(), false);
@@ -5531,7 +5734,7 @@ namespace ForeverManager
             bool bulk = click.Length == 2 && (click[1] == "all" || click[1] == "installsel" || click[1] == "uninstallsel");
             if (target != null && !bulk)
             {
-                Rectangle spot = click[1] == "update" ? RowChip(CellOf(target, 3), RowAction((TrackedAddon)target.Tag) ?? "Update") : CrossBox(CellOf(target, 5));
+                Rectangle spot = click[1] == "update" ? RowChip(CellOf(target, ColState), RowAction((TrackedAddon)target.Tag) ?? "Update") : CrossBox(CellOf(target, ColCross));
                 MouseEventArgs at = new MouseEventArgs(MouseButtons.Left, 1, spot.X + spot.Width / 2, spot.Y + spot.Height / 2, 0);
                 ClickList(list, at);
                 if (click[1] == "cross") ClickList(list, at);

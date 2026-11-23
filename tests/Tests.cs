@@ -166,7 +166,7 @@ namespace ForeverManager
             Is(GitHub.Digest("sha256:AEBFA8A60EE1185760D5C4E779C1DCEB999E1897295D0CDBA90DC740242FFDF2") == "aebfa8a60ee1185760d5c4e779c1dceb999e1897295d0cdba90dc740242ffdf2", "digest");
             Is(GitHub.Digest("md5:12") == null, "other digest");
             Is(Core.CompareVersions("0.3.1", "0.2.5") > 0 && Core.CompareVersions("0.3.0", "0.3.0") == 0 && Core.CompareVersions("v0.10", "0.9.9") > 0 && Core.CompareVersions("0.2", "0.2.1") < 0, "versions");
-            Is(Core.Name == "Forever Manager" && Core.RunName == "ForeverManager" && Core.Version == "1.0.9", "its own name, Run key and version (" + Core.RunName + " " + Core.Version + ")");
+            Is(Core.Name == "Forever Manager" && Core.RunName == "ForeverManager" && Core.Version == "1.1.0", "its own name, Run key and version (" + Core.RunName + " " + Core.Version + ")");
             Is(Core.Home() == Path.Combine(root, "home") && Core.TestMode, "a test's folder, in test mode");
             Is(Pack.Owns("Morderous/Forever-Addons") && !Pack.Owns("morderous/foreverui") && !Pack.Owns(null), "the token is for the pack's repository alone");
             Environment.SetEnvironmentVariable("FUM_GAME_VERSION", "1.60.1.65432");
@@ -478,6 +478,39 @@ namespace ForeverManager
             DateTime t = new DateTime(2026, 11, 7, 12, 0, 0);
             Is(MainForm.Due(DateTime.MinValue, t) && !MainForm.Due(t, t.AddHours(3).AddMinutes(59)) && MainForm.Due(t, t.AddHours(4)) && MainForm.Due(t, t.AddHours(9)) && !MainForm.Due(t, t.AddMinutes(30)),
                 "a check is due after 4 hours, not before (not after 30 minutes, nor 6 hours)");
+
+            // The list's order: by a column, the not installed after all the others.
+            Func<string, string, string, string, bool, TrackedAddon> row = (title, tag, known, at, auto) =>
+                new TrackedAddon { Repo = "o/" + title, Title = title, Tag = tag, Known = known, InstalledAt = at, Auto = auto };
+            TrackedAddon bravo = row("Bravo", "1", "1", "2026-11-20 10:00", false), alpha = row("alpha", "1", "2", "2026-11-01 09:00", true),
+                delta = row("Delta", null, "3", null, true), charlie = row("Charlie", "1", "1", "2026-11-22 23:50", true),
+                echo = row("Echo", "1", "1", null, false), absent = row("Absent", null, "1", "2026-11-23 08:00", false),
+                hand = row("Hand", null, "1", null, false), lost = row("Gone", "1", "1", "2026-10-01 08:00", false);
+            hand.Found = "0.9";
+            lost.Missing = true;
+            List<TrackedAddon> rows = new List<TrackedAddon> { bravo, delta, alpha, absent, charlie, echo, hand, lost };
+            Func<string, bool, string> ordered = (by, flip) => string.Join(" ", MainForm.Order(rows, by, flip).Select(a => a.Name).ToArray());
+            Is(MainForm.Below(delta) && MainForm.Below(absent) && !MainForm.Below(hand) && !MainForm.Below(lost) && !MainForm.Below(bravo),
+                "under the line: the not installed only (not a copy put in by hand, nor one whose folders are gone)");
+            Is(ordered("", false) == "Bravo alpha Charlie Echo Hand Gone Delta Absent", "no column picked: as kept, the not installed last (" + ordered("", false) + ")");
+            Is(ordered("name", false) == "alpha Bravo Charlie Echo Gone Hand Absent Delta" && ordered("name", true) == "Hand Gone Echo Charlie Bravo alpha Delta Absent",
+                "by name, A to Z and back, each group by itself (" + ordered("name", true) + ")");
+            Is(ordered("state", false) == "Gone alpha Hand Bravo Charlie Echo Absent Delta", "by state: folders gone, an update waiting, by hand, then the fine ones (" + ordered("state", false) + ")");
+            Is(ordered("updated", false) == "Charlie Bravo alpha Gone Echo Hand Absent Delta" && ordered("updated", true) == "Gone alpha Bravo Charlie Echo Hand Absent Delta",
+                "by the last update: newest first, then oldest first, the ones with no date last either way (" + ordered("updated", true) + ")");
+            Is(ordered("auto", false) == "alpha Charlie Bravo Echo Gone Hand Delta Absent" && ordered("auto", true).StartsWith("Bravo Echo Gone Hand alpha Charlie"),
+                "by Auto update: on first, then off first (" + ordered("auto", false) + ")");
+            charlie.Private = true;
+            Is(ordered("source", false) == "Charlie alpha Bravo Echo Gone Hand Absent Delta" && ordered("source", true) == "alpha Bravo Echo Gone Hand Charlie Absent Delta"
+                && MainForm.SourceWord(charlie) == "Forever" && MainForm.SourceWord(bravo) == "GitHub",
+                "by source: the Forever pack's own first, then GitHub, each by name (" + ordered("source", false) + ")");
+            charlie.Private = false;
+            Is(rows[0] == bravo && rows[1] == delta, "the list kept is left as it was");
+            DateTime day = new DateTime(2026, 11, 23, 0, 10, 0);
+            Is(MainForm.Ago("2026-11-23 00:05", day) == "today" && MainForm.Ago("2026-11-22 23:50", day) == "yesterday" && MainForm.Ago("2026-11-12 14:05", day) == "11 d ago"
+                && MainForm.Ago("2026-09-25 14:05", day) == "59 d ago" && MainForm.Ago("2026-08-01 10:00", day) == "3 mo ago" && MainForm.Ago("2024-01-01 10:00", day) == "2 y ago"
+                && MainForm.Ago(null, day) == "-" && MainForm.Ago("soon", day) == "-",
+                "Updated: today, yesterday, days, months and years ago (" + MainForm.Ago("2026-08-01 10:00", day) + ")");
         }
 
         static void PackList()
@@ -712,7 +745,7 @@ namespace ForeverManager
             };
             return "{\"format\":1,\"updated\":\"2026-11-13T00:00:00Z\",\"releases\":["
                 + rel("foreverui/v0.1.6", "ForeverUI-0.1.6.zip", "foreverui/ForeverUI-0.1.6.zip", 5000, "2026-11-13T02:00:00Z") + ","
-                + rel("manager/v1.0.10", "ForeverManager-1.0.10.exe", "manager/ForeverManager-1.0.10.exe", 300000, "2026-11-13T01:00:00Z") + ","
+                + rel("manager/v1.1.1", "ForeverManager-1.1.1.exe", "manager/ForeverManager-1.1.1.exe", 300000, "2026-11-13T01:00:00Z") + ","
                 + rel("foreverui/v0.1.5", "ForeverUI-0.1.5.zip", "foreverui/ForeverUI-0.1.5.zip", 4000, "2026-11-12T01:00:00Z") + ","
                 + rel("forevermap/v0.7.5-fm.3", "ForeverMap-0.7.5-fm.3.zip", "forevermap/../ForeverMap-0.7.5-fm.3.zip", 4000, "2026-11-12T00:00:00Z") + ","
                 + rel("foreverguides/v0.1.17", "ForeverGuides-0.1.17.zip", "foreverguides/ForeverGuides-0.1.17.zip", 4000, "2026-11-11T00:00:00Z") + ","
@@ -759,7 +792,7 @@ namespace ForeverManager
                 List<Release> older = GitHub.Older(tracked, "foreverui/v0.1.6", 5).ToList();
                 Is(older.Count == 1 && older[0].Tag == "foreverui/v0.1.5" && Friends.Owns(older[0].ZipUrl), "an older version from the same manifest");
                 SelfUpdate.Offer self = SelfUpdate.Check();
-                Is(self != null && self.Version == "1.0.10" && self.Url == at + "manager/ForeverManager-1.0.10.exe" && self.Sha256 == new string('c', 64), "the Manager's own new version from the manifest");
+                Is(self != null && self.Version == "1.1.1" && self.Url == at + "manager/ForeverManager-1.1.1.exe" && self.Sha256 == new string('c', 64), "the Manager's own new version from the manifest");
                 Is(Throws(delegate { Net.Download(Friends.Home + "manifest.json", Path.Combine(root, "no.zip"), null, null, 0, false, FakeToken); }, "only through"),
                     "a private download only from the server's files (f/)");
                 Is(!Friends.Owns("https://friends.survivorui.com.evil.example/f/a.zip") && !Friends.Owns("http://friends.survivorui.com/f/a.zip"), "only the server's own https address counts");
