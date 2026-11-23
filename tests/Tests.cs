@@ -166,7 +166,7 @@ namespace ForeverManager
             Is(GitHub.Digest("sha256:AEBFA8A60EE1185760D5C4E779C1DCEB999E1897295D0CDBA90DC740242FFDF2") == "aebfa8a60ee1185760d5c4e779c1dceb999e1897295d0cdba90dc740242ffdf2", "digest");
             Is(GitHub.Digest("md5:12") == null, "other digest");
             Is(Core.CompareVersions("0.3.1", "0.2.5") > 0 && Core.CompareVersions("0.3.0", "0.3.0") == 0 && Core.CompareVersions("v0.10", "0.9.9") > 0 && Core.CompareVersions("0.2", "0.2.1") < 0, "versions");
-            Is(Core.Name == "Forever Manager" && Core.RunName == "ForeverManager" && Core.Version == "1.1.0", "its own name, Run key and version (" + Core.RunName + " " + Core.Version + ")");
+            Is(Core.Name == "Forever Manager" && Core.RunName == "ForeverManager" && Core.Version == "1.1.1", "its own name, Run key and version (" + Core.RunName + " " + Core.Version + ")");
             Is(Core.Home() == Path.Combine(root, "home") && Core.TestMode, "a test's folder, in test mode");
             Is(Pack.Owns("Morderous/Forever-Addons") && !Pack.Owns("morderous/foreverui") && !Pack.Owns(null), "the token is for the pack's repository alone");
             Environment.SetEnvironmentVariable("FUM_GAME_VERSION", "1.60.1.65432");
@@ -745,7 +745,7 @@ namespace ForeverManager
             };
             return "{\"format\":1,\"updated\":\"2026-11-13T00:00:00Z\",\"releases\":["
                 + rel("foreverui/v0.1.6", "ForeverUI-0.1.6.zip", "foreverui/ForeverUI-0.1.6.zip", 5000, "2026-11-13T02:00:00Z") + ","
-                + rel("manager/v1.1.1", "ForeverManager-1.1.1.exe", "manager/ForeverManager-1.1.1.exe", 300000, "2026-11-13T01:00:00Z") + ","
+                + rel("manager/v1.1.2", "ForeverManager-1.1.2.exe", "manager/ForeverManager-1.1.2.exe", 300000, "2026-11-13T01:00:00Z") + ","
                 + rel("foreverui/v0.1.5", "ForeverUI-0.1.5.zip", "foreverui/ForeverUI-0.1.5.zip", 4000, "2026-11-12T01:00:00Z") + ","
                 + rel("forevermap/v0.7.5-fm.3", "ForeverMap-0.7.5-fm.3.zip", "forevermap/../ForeverMap-0.7.5-fm.3.zip", 4000, "2026-11-12T00:00:00Z") + ","
                 + rel("foreverguides/v0.1.17", "ForeverGuides-0.1.17.zip", "foreverguides/ForeverGuides-0.1.17.zip", 4000, "2026-11-11T00:00:00Z") + ","
@@ -792,7 +792,7 @@ namespace ForeverManager
                 List<Release> older = GitHub.Older(tracked, "foreverui/v0.1.6", 5).ToList();
                 Is(older.Count == 1 && older[0].Tag == "foreverui/v0.1.5" && Friends.Owns(older[0].ZipUrl), "an older version from the same manifest");
                 SelfUpdate.Offer self = SelfUpdate.Check();
-                Is(self != null && self.Version == "1.1.1" && self.Url == at + "manager/ForeverManager-1.1.1.exe" && self.Sha256 == new string('c', 64), "the Manager's own new version from the manifest");
+                Is(self != null && self.Version == "1.1.2" && self.Url == at + "manager/ForeverManager-1.1.2.exe" && self.Sha256 == new string('c', 64), "the Manager's own new version from the manifest");
                 Is(Throws(delegate { Net.Download(Friends.Home + "manifest.json", Path.Combine(root, "no.zip"), null, null, 0, false, FakeToken); }, "only through"),
                     "a private download only from the server's files (f/)");
                 Is(!Friends.Owns("https://friends.survivorui.com.evil.example/f/a.zip") && !Friends.Owns("http://friends.survivorui.com/f/a.zip"), "only the server's own https address counts");

@@ -35,8 +35,8 @@ using Microsoft.Win32;
 [assembly: AssemblyProduct("Forever Manager")]
 [assembly: AssemblyDescription("Keeps WoW Forever addons up to date from the Forever pack")]
 [assembly: AssemblyCompany("morderous")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.1.1.0")]
+[assembly: AssemblyFileVersion("1.1.1.0")]
 
 namespace ForeverManager
 {
@@ -141,7 +141,7 @@ namespace ForeverManager
     // folder elsewhere and keeps the app off the Windows Run key.
     static class Core
     {
-        public const string Version = "1.1.0";
+        public const string Version = "1.1.1";
         public const string Author = "morderous";
         public const string AuthorUrl = "https://github.com/morderous";
         public const string KofiUrl = "https://ko-fi.com/morderous";
@@ -440,7 +440,7 @@ namespace ForeverManager
         public string Repo, Title, Series, Zip;
         public bool Required;           // always on the list, cannot be taken off
         public bool Ticked = true;      // comes ticked (a big one does not)
-        public bool Recommended;        // shows a "Recommended" tag; ticked or not as "ticked" says
+        public bool Recommended;        // said in its details; ticked or not as "ticked" says
         public bool Private;           // from the pack's own repository: read with the token
         public bool GuidesOnly;         // its zip may hold guide folders only (ForeverGuidesPack_, PolestarPack_)
         public string[] Replaces;       // repositories it takes the place of: they stop being required while it is on
@@ -618,7 +618,7 @@ namespace ForeverManager
         public string Busy;             // "Downloading 40%"
         public string Source;           // "pack": an addon of the Forever pack; null: added by hand
         public bool Required;           // the pack's word, read again at each start: cannot be taken off
-        public bool Recommended;        // the pack's word too: a "Recommended" tag on its row, nothing more
+        public bool Recommended;        // the pack's word too: said in its details, nothing more
         public bool Dev;                // in AddOns by hand, matching none of its releases (a "Dev" tag): Install selected leaves it unless ticked
         public int DevCompared;         // how many of its releases it was compared with
         public string[] DevFolders;     // its folders in AddOns
@@ -4552,16 +4552,6 @@ namespace ForeverManager
                                 after = tag.Right - text.X + S(2);
                             }
                         }
-                        // The pack's "recommended": a tag after the name, where it fits whole.
-                        if (a.Recommended)
-                        {
-                            Rectangle tag = TagBox(e.Graphics, "Recommended", text.X + after + S(4), cell);
-                            if (tag.Right <= text.Right)
-                            {
-                                DrawTag(e.Graphics, "Recommended", tag, CGold);
-                                after = tag.Right - text.X + S(6);
-                            }
-                        }
                         Rectangle by = new Rectangle(text.X + after, text.Y, Math.Max(0, text.Width - after), text.Height);
                         // Its author alone: where it comes from has a column of its own.
                         string who = a.By != "" && !a.Private ? "by " + a.By : "";
@@ -4621,7 +4611,7 @@ namespace ForeverManager
             }
         }
 
-        // A small tag on a row ("Recommended"): its box, centred on the row's height.
+        // A small tag on a row ("Dev", its Source): its box, centred on the row's height.
         Rectangle TagBox(Graphics g, string words, int x, Rectangle cell)
         {
             Size size = TextRenderer.MeasureText(g, words, small, new Size(int.MaxValue, cell.Height), TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
