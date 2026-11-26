@@ -35,8 +35,8 @@ using Microsoft.Win32;
 [assembly: AssemblyProduct("Forever Manager")]
 [assembly: AssemblyDescription("Keeps WoW Forever addons up to date from the Forever pack")]
 [assembly: AssemblyCompany("morderous")]
-[assembly: AssemblyVersion("1.1.1.0")]
-[assembly: AssemblyFileVersion("1.1.1.0")]
+[assembly: AssemblyVersion("1.1.2.0")]
+[assembly: AssemblyFileVersion("1.1.2.0")]
 
 namespace ForeverManager
 {
@@ -141,7 +141,7 @@ namespace ForeverManager
     // folder elsewhere and keeps the app off the Windows Run key.
     static class Core
     {
-        public const string Version = "1.1.1";
+        public const string Version = "1.1.2";
         public const string Author = "morderous";
         public const string AuthorUrl = "https://github.com/morderous";
         public const string KofiUrl = "https://ko-fi.com/morderous";
@@ -445,6 +445,7 @@ namespace ForeverManager
         public bool GuidesOnly;         // its zip may hold guide folders only (ForeverGuidesPack_, PolestarPack_)
         public string[] Replaces;       // repositories it takes the place of: they stop being required while it is on
         public long CurseId = -1;       // a CurseForge project ("curseforge:<id>" as its Repo)
+        public long AlsoCurse = -1;     // a public GitHub one also on CurseForge ("alsoCurseforge"): the newer of the two is taken
 
         public bool IsCurse { get { return CurseId > 0; } }
 
@@ -575,6 +576,15 @@ namespace ForeverManager
                     if (other != null && !string.Equals(other, repo, StringComparison.OrdinalIgnoreCase)) replaces.Add(other);
                 }
                 if (replaces.Count > 0) k.Replaces = replaces.ToArray();
+                // Its author ships it to CurseForge too, at times ahead of GitHub
+                // (Spoken's voice packs): both are asked, the newer is taken. A
+                // name of its own, so a Manager before 1.1.2 reads GitHub alone.
+                if (d.ContainsKey("alsoCurseforge") && !k.Private)
+                {
+                    long also = Json.Long(d, "alsoCurseforge");
+                    if (also > 0 && also <= int.MaxValue) k.AlsoCurse = also;
+                    else Core.Log("pack.json: " + (title ?? repo) + "'s alsoCurseforge is not a number, GitHub alone");
+                }
             }
             k.Required = Json.Bool(d, "required");
             k.Ticked = k.Required || !d.ContainsKey("ticked") || Json.Bool(d, "ticked");
@@ -608,8 +618,10 @@ namespace ForeverManager
         public string ReplacedBy;       // another addon takes its place: no longer required
         public long CurseId = -1;       // a CurseForge project's id
         public string Slug, Author;     // a CurseForge project's name in its link, and its author
+        public bool TagCurse;           // a GitHub one also on CurseForge: the version installed came from CurseForge
 
         // Not kept: this run's look.
+        public long AlsoCurse = -1;     // the pack's word: a GitHub one also on CurseForge, the newer of the two taken
         public Release Latest;
         public string Problem;          // why the last check failed
         public string Found;            // its version, when it is in AddOns but not put there by us
@@ -625,6 +637,13 @@ namespace ForeverManager
         public bool Marked;             // installed (or a dev copy): its box, ticked for Uninstall selected (Install selected); this run only
 
         public bool IsCurse { get { return Kind == "curseforge"; } }
+
+        // Where the copy in AddOns came from, or, not installed, where the
+        // newest comes from: CurseForge, for one of GitHub also on CurseForge.
+        public bool FromCurse
+        {
+            get { return IsCurse || (AlsoCurse > 0 && (Tag != null ? TagCurse : Latest != null && Latest.FileId > 0)); }
+        }
 
         // One entry per repository and series: Spoken and each of its voice
         // packs come from one repository. "owner/name", or "owner/name <series>"
@@ -683,6 +702,7 @@ namespace ForeverManager
             Private = k.Private;
             GuidesOnly = k.GuidesOnly;
             Replaces = k.Replaces;
+            AlsoCurse = k.AlsoCurse;
             Required = k.Required && !replaced;
             Recommended = k.Recommended;
             if (Required) Want = true;
@@ -747,6 +767,7 @@ namespace ForeverManager
                 a.Title = known.Title;
                 a.Series = known.Series;
                 a.ZipPattern = known.Zip;
+                a.AlsoCurse = known.AlsoCurse;
             }
             return a;
         }
@@ -944,6 +965,7 @@ namespace ForeverManager
                     if (GitHub.ParseRepo(r as string) != null) replaces.Add(GitHub.ParseRepo((string)r));
                 a.Replaces = replaces.Count > 0 ? replaces.ToArray() : null;
                 a.ReplacedBy = Json.Str(d, "replacedBy");
+                a.TagCurse = Json.Bool(d, "tagCurse");
             }
             if (Json.Str(d, "source") == "pack") a.Source = "pack";
             a.GuidesOnly = Json.Bool(d, "guidesOnly");
@@ -985,6 +1007,7 @@ namespace ForeverManager
                     if (a.Private) d["private"] = true;
                     if (a.Replaces != null) d["replaces"] = a.Replaces;
                     if (a.ReplacedBy != null) d["replacedBy"] = a.ReplacedBy;
+                    if (a.TagCurse && a.Tag != null) d["tagCurse"] = true;
                 }
                 if (a.Source != null) d["source"] = a.Source;
                 if (a.GuidesOnly) d["guidesOnly"] = true;
@@ -1602,6 +1625,7 @@ namespace ForeverManager
         {
             if (a.IsCurse) return CurseForge.Latest(a.CurseId);
             if (a.Private || Pack.Owns(a.Repo)) return PrivateLatest(a.Repo, a.Series, a.ZipPattern, a.Betas);
+            if (a.AlsoCurse > 0 && CurseForge.On) return Newer(() => Latest(a.Repo, a.Series, a.ZipPattern, a.Betas), a.AlsoCurse, a.Tag);
             return Latest(a.Repo, a.Series, a.ZipPattern, a.Betas);
         }
 
@@ -1609,7 +1633,39 @@ namespace ForeverManager
         {
             if (k.IsCurse) return CurseForge.Latest(k.CurseId);
             if (k.Private) return PrivateLatest(k.Repo, k.Series, k.Zip, false);
+            if (k.AlsoCurse > 0 && CurseForge.On) return Newer(() => Latest(k.Repo, k.Series, k.Zip, false), k.AlsoCurse, null);
             return Latest(k.Repo, k.Series, k.Zip, false);
+        }
+
+        // A GitHub one also on CurseForge: both asked, the higher version
+        // taken ("places-audio/v2.1.0" against "SpokenPlacesAudio 2.1.2": by
+        // the numbers alone). The same version: the one installed, else
+        // GitHub's, so nothing goes in again for a name. One that does not
+        // answer: the other; neither: GitHub's reason.
+        public static Release Newer(Func<Release> github, long curseId, string installed)
+        {
+            Release gh = null, cf = null;
+            Exception ghWhy = null;
+            try { gh = github(); }
+            catch (Exception why) { ghWhy = why; Core.Log("GitHub side of CurseForge " + curseId + ": " + why.Message); }
+            try { cf = CurseForge.Latest(curseId); }
+            catch (Exception why) { Core.Log("CurseForge side (" + curseId + "): " + why.Message); }
+            if (cf == null)
+            {
+                if (gh == null) throw ghWhy;
+                return gh;
+            }
+            if (gh == null) return cf;
+            int order = Core.CompareVersions(VersionIn(cf.Tag), VersionIn(gh.Tag));
+            if (order > 0 || (order == 0 && installed != null && installed == cf.Tag)) return cf;
+            return gh;
+        }
+
+        // The version in a tag or a CurseForge file's name: its last run of numbers with dots ("2.1.2").
+        public static string VersionIn(string tag)
+        {
+            MatchCollection all = Regex.Matches(tag ?? "", @"\d+(?:\.\d+)+");
+            return all.Count > 0 ? all[all.Count - 1].Value : tag ?? "";
         }
 
         // Tests: the private API's answers made up (path, token, accept).
@@ -2899,7 +2955,13 @@ namespace ForeverManager
         {
             if (addons == null || latest == null || !Directory.Exists(addons)) return null;
             Result result = new Result();
-            IEnumerable<Release> older = a.IsCurse ? CurseForge.Older(a.CurseId, latest.FileId, Most) : GitHub.Older(a, latest.Tag, Most);
+            IEnumerable<Release> older = a.IsCurse ? CurseForge.Older(a.CurseId, latest.FileId, Most)
+                // Also on CurseForge: the files of both, the newest one's side first.
+                : a.AlsoCurse > 0 && CurseForge.On
+                    ? (latest.FileId > 0
+                        ? CurseForge.Older(a.AlsoCurse, latest.FileId, Most).Concat(GitHub.Older(a, null, Most))
+                        : GitHub.Older(a, latest.Tag, Most).Concat(CurseForge.Older(a.AlsoCurse, -1, Most)))
+                : GitHub.Older(a, latest.Tag, Most);
             foreach (Release r in new[] { latest }.Concat(older))
             {
                 List<ZipItem> index;
@@ -3621,12 +3683,12 @@ namespace ForeverManager
         // the Forever pack's own server, GitHub, CurseForge.
         public static int SourceRank(TrackedAddon a)
         {
-            return a.IsCurse ? 2 : a.Private ? 0 : 1;
+            return a.FromCurse ? 2 : a.Private ? 0 : 1;
         }
 
         public static string SourceWord(TrackedAddon a)
         {
-            return a.IsCurse ? "CurseForge" : a.Private ? "Forever" : "GitHub";
+            return a.FromCurse ? "CurseForge" : a.Private ? "Forever" : "GitHub";
         }
 
         // Under the line at the end of the list, whatever its order: not
@@ -4561,7 +4623,7 @@ namespace ForeverManager
                 case ColSource:
                     {
                         string from = SourceWord(a);
-                        DrawTag(e.Graphics, from, TagBox(e.Graphics, from, text.X, cell), a.IsCurse ? CCurse : a.Private ? CGold : CGitHub);
+                        DrawTag(e.Graphics, from, TagBox(e.Graphics, from, text.X, cell), a.FromCurse ? CCurse : a.Private ? CGold : CGitHub);
                         break;
                     }
                 case ColInstalled:
@@ -4651,7 +4713,9 @@ namespace ForeverManager
         // A version in a column: a CurseForge file's name ("QuestCompletist 3.8") by its version alone ("3.8").
         static string VersionText(TrackedAddon a, string tag)
         {
-            if (!a.IsCurse) return Short(tag);
+            // Also on CurseForge: a series' tag has its "/", a CurseForge file's name not.
+            if (!a.IsCurse && (a.AlsoCurse <= 0 || tag.IndexOf('/') >= 0)) return Short(tag);
+            if (!a.IsCurse) return "v" + GitHub.VersionIn(tag);   // "SpokenReadablesAudio-2.4.2.zip": "v2.4.2", as its GitHub tags show
             MatchCollection all = Regex.Matches(tag, @"[vV]?\d+(?:\.\d+)+[0-9A-Za-z.\-]*");
             return all.Count > 0 ? all[all.Count - 1].Value.TrimEnd('.', '-') : tag;
         }
@@ -5123,6 +5187,7 @@ namespace ForeverManager
             if (seen.Kind == Recognize.Kind.Same && seen.Release != null)
             {
                 a.Tag = seen.Release.Tag;
+                a.TagCurse = !a.IsCurse && seen.Release.FileId > 0;
                 a.Asset = seen.Release.ZipName;
                 a.Folders = seen.Folders;
                 a.InstalledAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
@@ -5209,6 +5274,8 @@ namespace ForeverManager
         static string Where(TrackedAddon a)
         {
             if (a.IsCurse) return "CurseForge (" + CurseForge.Site + (a.Slug ?? a.CurseId.ToString(CultureInfo.InvariantCulture)) + "), checked against CurseForge's sha1, and only as addon folders";
+            if (a.FromCurse) return "CurseForge (" + (a.Latest != null && a.Latest.PageUrl != null ? a.Latest.PageUrl : "project " + a.AlsoCurse.ToString(CultureInfo.InvariantCulture))
+                + "), newer there than on its GitHub releases (github.com/" + a.Repo + "), checked against CurseForge's sha1, and only as addon folders";
             if (a.Private) return Friends.Live ? "the Forever pack's own releases, from the friends' server, checked against the pack's sha256" : "the Forever pack's own releases, checked against GitHub's sha256";
             return "its GitHub releases (github.com/" + a.Repo + "), checked against GitHub's sha256";
         }
@@ -5255,7 +5322,7 @@ namespace ForeverManager
             {
                 long size = a.Latest != null ? a.Latest.Size : -1;
                 if (size > 0) total += size; else allSized = false;
-                lines.Add("  " + a.Name + "  (" + (a.IsCurse ? "CurseForge" : a.Private ? "Forever pack" : "github.com/" + a.Repo) + (size > 0 ? ", " + Bytes(size) : "") + ")");
+                lines.Add("  " + a.Name + "  (" + (a.FromCurse ? "CurseForge" : a.Private ? "Forever pack" : "github.com/" + a.Repo) + (size > 0 ? ", " + Bytes(size) : "") + ")");
             }
             string text = "Install these " + asked.Count + " addons?\n\n" + string.Join("\n", lines.ToArray()) + "\n\n" +
                 "Addons run inside WoW Forever with your character and account. Each comes straight from its source (the Forever pack's releases, " +
@@ -5307,7 +5374,7 @@ namespace ForeverManager
                     Say(a, "Checking...", 1);
                     Installer.Verify(zip, r);
                     if (a.GuidesOnly) Installer.OnlyGuides(zip);
-                    if (a.IsCurse) Installer.OnlyAddonFolders(zip);
+                    if (a.IsCurse || r.FileId > 0) Installer.OnlyAddonFolders(zip);
                     Installer.RoomToUnpack(addonsFolder, zip);
                     // Checked whole: kept if it cannot go in now (a folder in use, or in the way), not downloaded again.
                     keep = resume;
@@ -5336,6 +5403,7 @@ namespace ForeverManager
                 a.Latest = r;
                 a.Known = r.Tag;
                 a.Tag = r.Tag;
+                a.TagCurse = !a.IsCurse && r.FileId > 0;
                 a.Asset = r.ZipName;
                 a.Folders = placed.Folders;
                 a.Want = true;

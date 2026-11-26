@@ -166,7 +166,7 @@ namespace ForeverManager
             Is(GitHub.Digest("sha256:AEBFA8A60EE1185760D5C4E779C1DCEB999E1897295D0CDBA90DC740242FFDF2") == "aebfa8a60ee1185760d5c4e779c1dceb999e1897295d0cdba90dc740242ffdf2", "digest");
             Is(GitHub.Digest("md5:12") == null, "other digest");
             Is(Core.CompareVersions("0.3.1", "0.2.5") > 0 && Core.CompareVersions("0.3.0", "0.3.0") == 0 && Core.CompareVersions("v0.10", "0.9.9") > 0 && Core.CompareVersions("0.2", "0.2.1") < 0, "versions");
-            Is(Core.Name == "Forever Manager" && Core.RunName == "ForeverManager" && Core.Version == "1.1.1", "its own name, Run key and version (" + Core.RunName + " " + Core.Version + ")");
+            Is(Core.Name == "Forever Manager" && Core.RunName == "ForeverManager" && Core.Version == "1.1.2", "its own name, Run key and version (" + Core.RunName + " " + Core.Version + ")");
             Is(Core.Home() == Path.Combine(root, "home") && Core.TestMode, "a test's folder, in test mode");
             Is(Pack.Owns("Morderous/Forever-Addons") && !Pack.Owns("morderous/foreverui") && !Pack.Owns(null), "the token is for the pack's repository alone");
             Environment.SetEnvironmentVariable("FUM_GAME_VERSION", "1.60.1.65432");
@@ -745,7 +745,7 @@ namespace ForeverManager
             };
             return "{\"format\":1,\"updated\":\"2026-11-13T00:00:00Z\",\"releases\":["
                 + rel("foreverui/v0.1.6", "ForeverUI-0.1.6.zip", "foreverui/ForeverUI-0.1.6.zip", 5000, "2026-11-13T02:00:00Z") + ","
-                + rel("manager/v1.1.2", "ForeverManager-1.1.2.exe", "manager/ForeverManager-1.1.2.exe", 300000, "2026-11-13T01:00:00Z") + ","
+                + rel("manager/v1.1.3", "ForeverManager-1.1.3.exe", "manager/ForeverManager-1.1.3.exe", 300000, "2026-11-13T01:00:00Z") + ","
                 + rel("foreverui/v0.1.5", "ForeverUI-0.1.5.zip", "foreverui/ForeverUI-0.1.5.zip", 4000, "2026-11-12T01:00:00Z") + ","
                 + rel("forevermap/v0.7.5-fm.3", "ForeverMap-0.7.5-fm.3.zip", "forevermap/../ForeverMap-0.7.5-fm.3.zip", 4000, "2026-11-12T00:00:00Z") + ","
                 + rel("foreverguides/v0.1.17", "ForeverGuides-0.1.17.zip", "foreverguides/ForeverGuides-0.1.17.zip", 4000, "2026-11-11T00:00:00Z") + ","
@@ -792,7 +792,7 @@ namespace ForeverManager
                 List<Release> older = GitHub.Older(tracked, "foreverui/v0.1.6", 5).ToList();
                 Is(older.Count == 1 && older[0].Tag == "foreverui/v0.1.5" && Friends.Owns(older[0].ZipUrl), "an older version from the same manifest");
                 SelfUpdate.Offer self = SelfUpdate.Check();
-                Is(self != null && self.Version == "1.1.2" && self.Url == at + "manager/ForeverManager-1.1.2.exe" && self.Sha256 == new string('c', 64), "the Manager's own new version from the manifest");
+                Is(self != null && self.Version == "1.1.3" && self.Url == at + "manager/ForeverManager-1.1.3.exe" && self.Sha256 == new string('c', 64), "the Manager's own new version from the manifest");
                 Is(Throws(delegate { Net.Download(Friends.Home + "manifest.json", Path.Combine(root, "no.zip"), null, null, 0, false, FakeToken); }, "only through"),
                     "a private download only from the server's files (f/)");
                 Is(!Friends.Owns("https://friends.survivorui.com.evil.example/f/a.zip") && !Friends.Owns("http://friends.survivorui.com/f/a.zip"), "only the server's own https address counts");
@@ -1237,6 +1237,31 @@ namespace ForeverManager
                 int calls = CurseForge.Calls;
                 CurseForge.Latest(27328);
                 Is(CurseForge.Calls == calls + 1, "one question for a project's file");
+
+                // A GitHub one also on CurseForge: the newer of the two (1.1.2).
+                Release cf = CurseForge.Latest(27328);
+                string cfv = GitHub.VersionIn(cf.Tag);
+                Is(GitHub.VersionIn("places-audio/v2.1.0") == "2.1.0" && GitHub.VersionIn("SpokenPlacesAudio 2.1.2") == "2.1.2"
+                    && GitHub.VersionIn("SpokenReadablesAudio-2.4.2.zip") == "2.4.2", "the version in a tag and in a CurseForge file's name");
+                Func<string, Func<Release>> gh = tag => () => new Release { Tag = tag, ZipName = "X.zip" };
+                Is(GitHub.Newer(gh("x/v0.0.1"), 27328, null) == null ? false : GitHub.Newer(gh("x/v0.0.1"), 27328, null).FileId > 0, "CurseForge newer: CurseForge's taken (" + cf.Tag + ")");
+                Is(GitHub.Newer(gh("x/v999.0"), 27328, null).Tag == "x/v999.0", "GitHub newer: GitHub's taken");
+                Is(GitHub.Newer(gh("x/v" + cfv), 27328, null).FileId < 0, "the same version: GitHub's");
+                Is(GitHub.Newer(gh("x/v" + cfv), 27328, cf.Tag).FileId > 0, "the same version, CurseForge's installed: CurseForge's, nothing again");
+                Is(GitHub.Newer(() => { throw new Exception("GitHub down"); }, 27328, null).FileId > 0, "GitHub down: CurseForge's");
+                Func<string, string> down = p => { throw new Exception("CurseForge down"); };
+                CurseForge.Fake = down;
+                Is(GitHub.Newer(gh("x/v0.0.1"), 99999, null).Tag == "x/v0.0.1", "CurseForge down: GitHub's");
+                Is(Throws(delegate { GitHub.Newer(() => { throw new Exception("GitHub down"); }, 99999, null); }, "GitHub down"), "both down: GitHub's reason");
+                KnownRepo[] also = Pack.Parse("{\"format\":1,\"addons\":[{\"repo\":\"a/b\",\"series\":\"^p/v\",\"zip\":\"P-*.zip\",\"alsoCurseforge\":1636532},{\"repo\":\"c/d\",\"alsoCurseforge\":\"x\"},{\"series\":\"^own/v\",\"zip\":\"O-*.zip\",\"alsoCurseforge\":5}]}");
+                Is(also.Length == 3 && also[0].AlsoCurse == 1636532 && !also[0].IsCurse && also[0].Repo == "a/b" && also[1].AlsoCurse < 0 && also[2].AlsoCurse < 0,
+                    "alsoCurseforge: kept on a public GitHub entry, not a number or the pack's own left out");
+                TrackedAddon row = TrackedAddon.ForItem(also[0]);
+                Is(row.AlsoCurse == 1636532 && !row.IsCurse && !row.FromCurse && TrackedAddon.SameKey(row.Key, also[0].Key), "its row: GitHub's key, CurseForge asked too");
+                row.Latest = cf;
+                Is(row.FromCurse && MainForm.SourceWord(row) == "CurseForge", "not installed, CurseForge's newer: its Source says CurseForge");
+                row.Tag = "p/v1.0"; row.TagCurse = false;
+                Is(!row.FromCurse && MainForm.SourceWord(row) == "GitHub", "installed from GitHub: its Source says GitHub");
             }
             finally
             {
@@ -1364,6 +1389,20 @@ namespace ForeverManager
                 Is(why is Final, "CurseForge answered, saying why there is no file to take (" + why.Message + ")");
             }
             Is(CurseForge.Calls - calls == 1, "one question asked (" + (CurseForge.Calls - calls) + ")");
+            // Spoken's voice packs also on CurseForge (1.1.2): what each side has, and the one taken. Nothing downloaded.
+            foreach (string[] p in new[] { new[] { "Places", "^places-audio/v\\d", "SpokenPlacesAudio-*.zip", "1636532" },
+                                           new[] { "Readables", "^readables-audio/v\\d", "SpokenReadablesAudio-*.zip", "1701520" } })
+            {
+                try
+                {
+                    Release gh = GitHub.Latest("rusty-key/spoken-wow", p[1], p[2]);
+                    Release cf = CurseForge.Latest(long.Parse(p[3]));
+                    Release pick = GitHub.Newer(() => gh, long.Parse(p[3]), null);
+                    Console.WriteLine("  Spoken " + p[0] + ": GitHub " + gh.Tag + ", CurseForge " + cf.Tag + " (" + cf.ZipName + ", " + Core.Bytes(cf.Size) + "); taken: " + pick.Tag);
+                    Is(Core.CompareVersions(GitHub.VersionIn(pick.Tag), GitHub.VersionIn(gh.Tag)) >= 0 && Core.CompareVersions(GitHub.VersionIn(pick.Tag), GitHub.VersionIn(cf.Tag)) >= 0, "Spoken " + p[0] + ": the newer taken");
+                }
+                catch (Exception why) { Console.WriteLine("  Spoken " + p[0] + ": " + why.Message); Is(false, "Spoken " + p[0] + " asked"); }
+            }
         }
         static void RealZip(string zip, int expected)
         {
